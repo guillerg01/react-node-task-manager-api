@@ -1,17 +1,17 @@
-# Task manager API
+# API del gestor de tareas
 
-NestJS and TypeScript REST API backed by PostgreSQL and TypeORM. Tasks have a title, assignee, status, and version. The assessment covers creation, listing, status filtering, status changes, validation, visible client failures, and automated tests.
+API REST con NestJS, TypeScript, PostgreSQL y TypeORM. Cada tarea tiene título, responsable, estado y versión. La prueba incluye creación, listado, filtro por estado, cambios de estado, validación, errores visibles y pruebas automatizadas.
 
-- Frontend repository: https://github.com/guillerg01/react-node-task-manager-web
-- Application: https://react-node-task-manager-web.onrender.com
+- Repositorio frontend: https://github.com/guillerg01/react-node-task-manager-web
+- Aplicación: https://react-node-task-manager-web.onrender.com
 - API: https://react-node-task-manager-api.onrender.com/api/tasks
 - Swagger: https://react-node-task-manager-api.onrender.com/docs
 - OpenAPI JSON: https://react-node-task-manager-api.onrender.com/docs-json
-- [Architecture diagrams](ARCHITECTURE.md) · [Technical decisions and AI workflow](DECISIONS.md)
+- [Diagramas de arquitectura](ARCHITECTURE.md) · [Decisiones y uso de IA](DECISIONS.md)
 
-## Run everything with Docker
+## Ejecutar todo con Docker
 
-Clone the two repositories into sibling directories. Start Docker Desktop or Docker Engine with Compose, then run:
+Clona ambos repositorios como carpetas hermanas. Con Docker Desktop o Docker Engine y Compose iniciados:
 
 ```sh
 git clone https://github.com/guillerg01/react-node-task-manager-api.git
@@ -20,13 +20,13 @@ cd react-node-task-manager-api
 docker compose up --build
 ```
 
-Open http://localhost:5174, Swagger at http://localhost:3001/docs, and health at http://localhost:3001/health. Compose supplies local environment values, waits for database/API health, and runs migrations before API startup. No `.env` is required for this path. A named PostgreSQL volume preserves data across container restarts.
+Abre http://localhost:5174, Swagger en http://localhost:3001/docs y salud en http://localhost:3001/health. Compose proporciona configuración local, espera la salud de los servicios y aplica migraciones antes de iniciar la API. Este camino no necesita `.env`. Un volumen de PostgreSQL conserva los datos entre reinicios.
 
-Docker makes the runtime and local dependencies reproducible; it does not replace migrations, tests, or environment configuration. The API image also runs on Render. The frontend is deployed separately as a static site.
+Docker reproduce el entorno y sus dependencias; no sustituye migraciones, pruebas ni configuración. La imagen de la API también se ejecuta en Render. El frontend se publica separadamente como sitio estático.
 
-## Environment configuration and native execution
+## Variables de entorno y ejecución nativa
 
-Use the Node version in `.nvmrc`. Copy `.env.example` to `.env` and adjust its development-only credentials for a local PostgreSQL installation. Create the `tasks` and `tasks_test` databases beforehand. Compose does not publish PostgreSQL to the host, so native execution requires a separate reachable database.
+Usa la versión de Node indicada en `.nvmrc`. Copia `.env.example` a `.env` y adapta sus credenciales locales a una instalación de PostgreSQL. Crea previamente las bases `tasks` y `tasks_test`. Compose no publica PostgreSQL al host: la ejecución nativa necesita una base accesible por separado.
 
 ```sh
 npm ci
@@ -35,71 +35,71 @@ node --env-file=.env scripts/migrate.mjs
 node --env-file=.env dist/src/main.js
 ```
 
-The API reads process environment variables; it does not automatically load `.env`. The explicit Node `--env-file` flag loads it for native commands. Docker and Render inject variables directly.
+La API lee variables del proceso y no carga `.env` automáticamente. El argumento explícito `--env-file` de Node carga ese archivo en la ejecución nativa. Docker y Render inyectan las variables directamente.
 
-| Variable | Purpose |
+| Variable | Uso |
 | --- | --- |
-| `DATABASE_URL` | Required PostgreSQL connection string; also used by migrations and seed |
-| `WEB_ORIGIN` | Comma-separated permitted frontend origins |
-| `PORT` | HTTP port; defaults to 3000, supplied by Render in production |
-| `NODE_ENV` | Runtime environment; test mode suppresses application logging |
-| `TEST_DATABASE_URL` | Dedicated integration database; database name must end in `_test` |
+| `DATABASE_URL` | Conexión PostgreSQL obligatoria; también la usan migraciones y seed |
+| `WEB_ORIGIN` | Orígenes permitidos del frontend separados por comas |
+| `PORT` | Puerto HTTP; 3000 por defecto y proporcionado por Render en producción |
+| `NODE_ENV` | Entorno de ejecución; el modo test desactiva el registro de la aplicación |
+| `TEST_DATABASE_URL` | Base exclusiva de integración cuyo nombre debe terminar en `_test` |
 
-`.env` files are ignored; only `.env.example` is tracked. Example credentials are local placeholders. Never put production connection strings in Git or frontend variables.
+Los archivos `.env` están excluidos de Git; únicamente se publica `.env.example`. Sus credenciales son ejemplos locales. Nunca se incluyen conexiones de producción en Git ni variables del frontend.
 
-## Optional sample data
+## Datos de ejemplo opcionales
 
 ```sh
 docker compose exec api npm run seed
 docker compose exec db psql -U tasks -d tasks
 ```
 
-The seed inserts one task per status. Stable identifiers and conflict handling avoid duplicates and preserve manually changed records on repeated runs. It is opt-in and does not run during production startup. For native execution, use `node --env-file=.env scripts/seed.mjs`.
+El seed inserta una tarea por estado. Sus identificadores estables y manejo de conflictos evitan duplicados y conservan modificaciones manuales al repetirlo. Es opcional y no se ejecuta al iniciar producción. En ejecución nativa: `node --env-file=.env scripts/seed.mjs`.
 
-## REST contract
+## Contrato REST
 
-| Method and path | Input | Result |
+| Método y ruta | Entrada | Resultado |
 | --- | --- | --- |
-| `GET /api/tasks` | Optional `status`, `page`, `pageSize` | `200`: `{ items, page, pageSize, total }` |
-| `POST /api/tasks` | `{ title, assignee }` | `201`: task in `pending`, version 1 |
-| `PATCH /api/tasks/:id/status` | `{ status, version }` | `200`: saved task with incremented version |
-| `GET /health` | None | `200` when database connectivity succeeds; `503` otherwise |
+| `GET /api/tasks` | `status`, `page` y `pageSize` opcionales | `200`: `{ items, page, pageSize, total }` |
+| `POST /api/tasks` | `{ title, assignee }` | `201`: tarea en `pending`, versión 1 |
+| `PATCH /api/tasks/:id/status` | `{ status, version }` | `200`: tarea guardada con versión incrementada |
+| `GET /health` | Ninguna | `200` con conexión disponible; `503` en caso contrario |
 
-Task responses contain `id` (UUID), `title`, `assignee`, `status`, and `version`. Supported statuses are `pending`, `in_progress`, and `done`. Required strings are trimmed; title and assignee limits are 120 and 100 characters. Pagination starts at 1, defaults to ten items, and accepts at most 100 items per page. PostgreSQL filters and paginates with deterministic `created_at DESC, id DESC` ordering. Items and count are read in a repeatable-read transaction for a consistent snapshot.
+Las tareas contienen `id` UUID, `title`, `assignee`, `status` y `version`. Los estados son `pending`, `in_progress` y `done`. Los textos obligatorios se recortan; título y responsable admiten 120 y 100 caracteres. La página empieza en 1, el tamaño predeterminado es 10 y el máximo es 100. PostgreSQL filtra y pagina con orden determinista `created_at DESC, id DESC`. Elementos y total se leen en una transacción de lectura repetible para obtener una vista consistente.
 
-Swagger documents request/response schemas, examples, validation constraints, query parameters, and error responses. Documentation is available without running the frontend.
+Swagger describe esquemas, ejemplos, restricciones, parámetros y respuestas de error. Se puede explorar sin iniciar el frontend.
 
-### Validation, failures, and concurrent updates
+### Validación, errores y concurrencia
 
-| Status | Meaning |
+| Código | Significado |
 | --- | --- |
-| `400` | Invalid body, required text, task status, UUID, version, or pagination bounds |
-| `404` | Task does not exist |
-| `409` | Supplied task version is stale |
-| `500` | Unexpected server failure, with internal details excluded from the response |
-| `503` | Health check cannot reach the database |
+| `400` | Cuerpo, texto obligatorio, estado, UUID, versión o paginación inválidos |
+| `404` | La tarea no existe |
+| `409` | La versión enviada está desactualizada |
+| `500` | Fallo inesperado sin exponer detalles internos |
+| `503` | La comprobación de salud no puede acceder a PostgreSQL |
 
-Validation runs on the server independently of the React form. Shared parsers implement reusable text and integer checks; the task feature supplies its limits and allowed statuses. DTOs describe the OpenAPI contract, while controller parsing enforces runtime input constraints.
+El servidor valida independientemente del formulario. Los validadores comunes reutilizan comprobaciones de texto y enteros; la feature aporta límites y estados permitidos. Los DTO describen OpenAPI y el controlador aplica la validación en ejecución.
 
-A status update performs one conditional database update against both `id` and `version`, incrementing the version atomically. If two clients submit version 1, one succeeds and the other receives `409` rather than silently overwriting the first change. The frontend refreshes before a deliberate retry. The API does not implement rate limiting; the frontend can nevertheless explain a `429` returned by an upstream service.
+El cambio de estado ejecuta una actualización condicional por `id` y `version`, incrementando la versión atómicamente. Si dos clientes envían la versión 1, uno guarda y el otro recibe `409`, evitando una sobrescritura silenciosa. El frontend actualiza los datos antes de un reintento deliberado. La API no implementa limitación de peticiones; el frontend sí explica un `429` procedente de un servicio intermedio.
 
-## Feature architecture and design decisions
+## Arquitectura por features
 
-| Location | Responsibility |
+| Ubicación | Responsabilidad |
 | --- | --- |
-| `src/tasks/tasks.controller.ts` | HTTP boundary, runtime validation, response codes, OpenAPI metadata |
-| `src/tasks/tasks.service.ts` | Task application operations through an injected repository |
-| `src/tasks/tasks.repository.ts` | TypeORM persistence, filtering, pagination, and conditional updates |
-| `src/tasks/task.entity.ts` | Database mapping and constraints |
-| `src/database` | TypeORM connection configuration |
-| `src/common` | Reusable request parsers |
-| `scripts` | Explicit migrations, seed, and isolated integration-test execution |
+| `src/tasks/tasks.controller.ts` | Entrada HTTP, validación, códigos y metadatos OpenAPI |
+| `src/tasks/tasks.service.ts` | Operaciones de aplicación con repositorio inyectado |
+| `src/tasks/tasks.repository.ts` | Persistencia TypeORM, filtros, paginación y actualizaciones condicionales |
+| `src/tasks/task.entity.ts` | Mapeo de columnas y restricciones |
+| `src/database` | Configuración de conexión TypeORM |
+| `src/common` | Validadores reutilizables de peticiones |
+| `scripts` | Migraciones explícitas, seed y ejecución aislada de integración |
 
-NestJS provides dependency injection and module boundaries; TypeORM supplies entity mapping and explicit migration tracking. `synchronize` is disabled to keep schema changes deliberate. PostgreSQL supplies persistence, transactions, and atomic concurrency checks.
+NestJS aporta inyección de dependencias y límites de módulos. TypeORM gestiona entidades y migraciones explícitas; `synchronize` permanece desactivado. PostgreSQL aporta persistencia, transacciones y comprobación atómica de versiones.
 
-The design applies single responsibility by separating HTTP, application operations, and persistence. Dependencies are injected so tests can substitute collaborators. The service remains intentionally small; there is no generic CRUD framework or extra domain hierarchy without a concrete need. SQL-specific behavior stays in the repository, and reusable validation stays outside the feature.
+La responsabilidad única separa HTTP, operaciones y persistencia. La inyección permite sustituir colaboradores en pruebas. El servicio es pequeño deliberadamente: no se añade un framework CRUD genérico ni una jerarquía de dominio sin necesidad concreta. Los detalles SQL permanecen en el repositorio y la validación reutilizable fuera de la feature.
 
-## Tests and quality checks
+## Pruebas y comprobaciones
 
 ```sh
 npm run lint
@@ -109,39 +109,39 @@ npm run build
 node --env-file=.env scripts/test-integration.mjs
 ```
 
-The final command uses `TEST_DATABASE_URL`, validates its dedicated test-database name, applies migrations, and exercises the HTTP API with real PostgreSQL. Do not point it at application or production data.
+El último comando utiliza `TEST_DATABASE_URL`, verifica el nombre reservado para pruebas, aplica migraciones y comprueba HTTP con PostgreSQL real. No debe apuntarse a datos de aplicación ni producción.
 
-| Level | Verified coverage |
+| Nivel | Cobertura verificada |
 | --- | --- |
-| Backend unit | 27 tests covering parsers, controller outcomes, service delegation, and repository behavior |
-| Backend integration | Eight tests covering HTTP validation, persistence, filters/pages, concurrent updates, OpenAPI, and controlled infrastructure failures |
-| Frontend unit/integration | 30 tests with Testing Library and MSW; see the frontend README |
-| Browser | Nine Playwright scenarios across desktop, tablet, and mobile against the Docker stack |
+| Unitario backend | 27 pruebas de validadores, controlador, delegación del servicio y repositorio |
+| Integración backend | Ocho pruebas de validación HTTP, persistencia, filtros, páginas, concurrencia, OpenAPI y fallos controlados |
+| Unitario e integración frontend | 30 pruebas con Testing Library y MSW |
+| Navegador | Nueve recorridos Playwright sobre Docker en escritorio, tablet y móvil |
 
-These counts describe the verified baseline, not a percentage of total correctness. Failure tests use controlled injections/interceptions instead of deliberately damaging production. Browser assertions cover complete user flows; direct visual inspection supplements them for layout and focus behavior.
+Los números describen la base verificada, no un porcentaje de corrección total. Los fallos se provocan con inyecciones o interceptaciones controladas, sin interrumpir producción. Las aserciones de navegador comprueban recorridos completos y la inspección visual revisa distribución y foco.
 
-## Branching, CI/CD, and deployment
+## Ramas, CI/CD y despliegue
 
-1. Branch from `dev` using `feature/*` or `fix/*`.
-2. Open a pull request into `dev` and review the changes and checks.
-3. Promote `dev` into `main` through a pull request. `main` is production.
+1. Crea `feature/*` o `fix/*` desde `dev`.
+2. Abre un pull request a `dev` y revisa cambios y comprobaciones.
+3. Promueve `dev` a `main` mediante otro pull request. `main` es producción.
 
-Both repositories configure GitHub Actions on pushes and pull requests. Checks install locked dependencies, run `npm audit --audit-level=moderate`, lint, typecheck, test, and build. The API job uses a dedicated PostgreSQL service for migration and integration tests. Browser jobs check out both repositories, start Compose, and run Playwright; they select the companion `dev` or `main` branch to match the integration target.
+Ambos repositorios configuran GitHub Actions para pushes y pull requests. CI instala dependencias bloqueadas, ejecuta `npm audit --audit-level=moderate`, lint, tipos, pruebas y compilación. La API usa un servicio PostgreSQL dedicado para migraciones e integración. Los trabajos de navegador obtienen ambos repositorios, levantan Compose y ejecutan Playwright. La rama compañera es `dev` o `main` según el destino de integración.
 
-Render follows `main` with deployment configured after passing checks. The API Blueprint uses a Docker web service and private PostgreSQL connection in the same region. `DATABASE_URL` is supplied from the database, `WEB_ORIGIN` allows the deployed frontend, and `/health` is the deployment health check. The frontend separately publishes its static build with a public API origin.
+Render sigue `main` y se configura para publicar después de comprobaciones correctas. El Blueprint crea una API Docker y PostgreSQL privado en la misma región. `DATABASE_URL` proviene de la base, `WEB_ORIGIN` permite el frontend y `/health` comprueba el despliegue. El frontend publica su compilación estática con el origen público de la API.
 
-Independent repositories mean releases are not atomic. Future breaking API changes would need a backward-compatible rollout and coordinated promotion. Branch protections and organizational approvals depend on repository settings; a documented workflow alone does not enforce them.
+Los repositorios independientes no ofrecen publicación atómica. Un cambio incompatible requiere coordinación y compatibilidad durante la transición. Las protecciones de ramas y aprobaciones dependen de la configuración del repositorio; documentar el flujo no lo impone por sí mismo.
 
-## Limitations and priorities with more time
+## Límites y próximos pasos
 
-This assessment is not a claim of production readiness for sensitive or multi-tenant data. Authentication, per-user ownership, request throttling, centralized monitoring, and a backup/restore procedure remain future work. The free Render API can cold-start, and its free PostgreSQL instance expires after 30 days. For larger datasets, I would evaluate cursor pagination and query plans before adding abstractions or infrastructure.
+La entrega no equivale a preparación para datos sensibles o múltiples usuarios privados. Quedan autenticación, propiedad por usuario, limitación de peticiones, monitorización y recuperación desde copias. La API gratuita puede tardar en despertar y PostgreSQL gratuito caduca después de 30 días. Para más volumen evaluaría paginación por cursor y planes de consulta antes de añadir infraestructura.
 
-## AI usage and engineering workflow
+## Uso de IA y forma de trabajo
 
-I asked AI to compare libraries, outline feature boundaries and the HTTP contract, implement bounded modules, and propose tests and documentation. Accepted choices included NestJS, TypeORM/PostgreSQL, the shared Axios client, TanStack Query, React Hook Form, and tests at unit, HTTP, UI, and browser levels.
+Se pidió comparar bibliotecas, definir arquitectura y contrato HTTP, implementar módulos delimitados y proponer pruebas y documentación. Se aceptaron NestJS, TypeORM/PostgreSQL, Axios compartido, TanStack Query, React Hook Form y pruebas por niveles.
 
-Luna subagents split API, interface, and test responsibilities using shared project rules and a common contract. The main agent integrated changes and performed the final review. Context was kept in `AGENTS.md`, the plan, API contract, and decision record rather than relying solely on chat. Independent work ran in parallel; contract changes and integration remained coordinated.
+Subagentes Luna repartieron API, interfaz y pruebas con reglas y contrato compartidos. El agente principal integró y revisó el resultado final. El contexto se conservó en `AGENTS.md`, el plan, el contrato y el registro de decisiones; las tareas independientes pudieron ejecutarse en paralelo y los cambios de contrato se coordinaron.
 
-Generated output was checked rather than accepted wholesale. Validation, cache behavior during pending writes/filter changes, focus styling, card alignment, and concurrent-update handling were refined through inspection and tests. UI/UX Pro Max supported interface checks. Browser-control/MCP tools supported inspection and Render configuration; Git and GitHub CLI handled repositories and CI. Playwright provided repeatable browser checks when integrated-browser access became unavailable.
+Las propuestas se revisaron mediante código y pruebas. Se ajustaron validación, caché durante escrituras y cambios de filtro, foco, alineación y concurrencia. UI/UX Pro Max apoyó la revisión visual. Herramientas de navegador y MCP apoyaron inspección y configuración de Render; Git y GitHub CLI gestionaron repositorios y CI. Playwright permitió repetir las pruebas cuando el navegador integrado dejó de estar disponible.
 
-See [DECISIONS.md](DECISIONS.md) for rationale, accepted choices, corrections, tooling, and verification boundaries. Credentials and private conversation records are excluded from the public project. Overall implementation, planning, and verification effort before this documentation pass was approximately 90 minutes; subsequent work should be included in the final time reported to the reviewer.
+[DECISIONS.md](DECISIONS.md) detalla motivos, decisiones aceptadas, correcciones, herramientas y límites. No se publican credenciales ni conversaciones privadas. El esfuerzo de implementación, planificación y verificación anterior a esta ampliación documental fue aproximadamente 90 minutos; el tiempo posterior debe sumarse al comunicar la dedicación final.
