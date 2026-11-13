@@ -44,6 +44,7 @@ La API lee variables del proceso y no carga `.env` automáticamente. El argument
 | `PORT` | Puerto HTTP; 3000 por defecto y proporcionado por Render en producción |
 | `NODE_ENV` | Entorno de ejecución; el modo test desactiva el registro de la aplicación |
 | `TEST_DATABASE_URL` | Base exclusiva de integración cuyo nombre debe terminar en `_test` |
+| `TASK_DELETE_PASSWORD` | Credencial del backend para operaciones de mantenimiento; vacía o ausente rechaza el acceso protegido |
 
 Los archivos `.env` están excluidos de Git; únicamente se publica `.env.example`. Sus credenciales son ejemplos locales. Nunca se incluyen conexiones de producción en Git ni variables del frontend.
 
@@ -113,7 +114,7 @@ El último comando utiliza `TEST_DATABASE_URL`, verifica el nombre reservado par
 
 | Nivel | Cobertura verificada |
 | --- | --- |
-| Unitario backend | 27 pruebas de validadores, controlador, delegación del servicio y repositorio |
+| Unitario backend | 35 pruebas de validadores, controlador, delegación, repositorio y autorización de mantenimiento |
 | Integración backend | Ocho pruebas de validación HTTP, persistencia, filtros, páginas, concurrencia, OpenAPI y fallos controlados |
 | Unitario e integración frontend | 30 pruebas con Testing Library y MSW |
 | Navegador | Nueve recorridos Playwright sobre Docker en escritorio, tablet y móvil |
