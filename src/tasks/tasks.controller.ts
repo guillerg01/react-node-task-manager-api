@@ -2,8 +2,11 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -14,6 +17,7 @@ import {
   ApiBody,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiExcludeEndpoint,
   ApiInternalServerErrorResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
@@ -66,6 +70,20 @@ function statusValue(value: unknown): TaskStatus | undefined {
 })
 export class TasksController {
   constructor(private readonly tasks: TasksService) {}
+
+  @Delete()
+  @HttpCode(204)
+  @ApiExcludeEndpoint()
+  async removeAll(): Promise<void> {
+    await this.tasks.removeAll();
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  @ApiExcludeEndpoint()
+  async remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
+    if (!(await this.tasks.remove(id))) throw new NotFoundException('Task not found');
+  }
 
   @Get()
   @ApiOperation({

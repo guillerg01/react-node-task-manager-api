@@ -42,6 +42,14 @@ export class TasksService {
     return this.repository.create(input);
   }
 
+  remove(id: string): Promise<boolean> {
+    return this.repository.remove(id);
+  }
+
+  removeAll(): Promise<void> {
+    return this.repository.removeAll();
+  }
+
   updateStatus(
     id: string,
     status: TaskStatus,

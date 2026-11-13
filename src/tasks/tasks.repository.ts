@@ -50,6 +50,15 @@ export class TasksRepository {
     return taskResponse(await this.tasks.save(this.tasks.create(input)));
   }
 
+  async remove(id: string): Promise<boolean> {
+    const result = await this.tasks.delete({ id });
+    return result.affected === 1;
+  }
+
+  async removeAll(): Promise<void> {
+    await this.tasks.clear();
+  }
+
   async updateStatus(
     id: string,
     status: TaskStatus,
