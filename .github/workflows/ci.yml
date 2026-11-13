@@ -1,0 +1,72 @@
+name: CI
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18.7-alpine
+        env:
+          POSTGRES_DB: tasks_test
+          POSTGRES_USER: tasks
+          POSTGRES_PASSWORD: tasks
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U tasks -d tasks_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      TEST_DATABASE_URL: postgresql://tasks:tasks@localhost:5432/tasks_test
+      DATABASE_URL: postgresql://tasks:tasks@localhost:5432/tasks_test
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run migrate
+      - run: npm run test:integration
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          path: react-node-task-manager-api
+      - uses: actions/checkout@v7.0.1
+        with:
+          repository: guillerg01/react-node-task-manager-web
+          ref: ${{ (github.ref_name == 'dev' || github.base_ref == 'dev') && 'dev' || 'main' }}
+          path: react-node-task-manager-web
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version-file: react-node-task-manager-web/.nvmrc
+          cache: npm
+          cache-dependency-path: react-node-task-manager-web/package-lock.json
+      - run: docker compose up -d --build --wait
+        working-directory: react-node-task-manager-api
+      - run: npm ci
+        working-directory: react-node-task-manager-web
+      - run: npx playwright install --with-deps chromium
+        working-directory: react-node-task-manager-web
+      - run: npm run test:e2e
+        working-directory: react-node-task-manager-web
+      - if: failure()
+        run: docker compose logs --no-color
+        working-directory: react-node-task-manager-api
+      - if: always()
+        run: docker compose down --volumes
+        working-directory: react-node-task-manager-api

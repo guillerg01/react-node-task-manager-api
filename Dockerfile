@@ -1,0 +1,14 @@
+FROM node:26.13.1-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build && npm prune --omit=dev
+
+FROM node:26.13.1-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=build --chown=node:node /app /app
+USER node
+EXPOSE 3000
+CMD ["sh", "-c", "npm run migrate && exec npm start"]

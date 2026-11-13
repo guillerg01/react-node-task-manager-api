@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: react-node-task-manager-api
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: main
+    autoDeployTrigger: checksPass
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: react-node-task-manager-db
+          property: connectionString
+      - key: WEB_ORIGIN
+        sync: false
+
+databases:
+  - name: react-node-task-manager-db
+    plan: free
+    region: oregon
+    postgresMajorVersion: "18"
+    ipAllowList: []
