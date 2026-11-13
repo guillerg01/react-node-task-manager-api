@@ -1,54 +1,86 @@
-# Decisiones del proyecto
+# Engineering decisions and working record
 
-## Alcance
+## Scope and delivery boundaries
 
-La prueba consiste en un gestor de tareas con React y Node.js, ambos en TypeScript, persistencia SQL, filtro por estado, validación, errores visibles y pruebas de backend y frontend. La implementación incluye paginación, seed opcional, Swagger, Docker y CI/CD.
+The assessment is a TypeScript task manager with a React frontend, a NestJS API, PostgreSQL persistence, status filtering, validation, visible errors, and tests on both sides. Two public repositories separate frontend and backend delivery. Supporting work includes pagination, an optional seed, OpenAPI, Docker, CI/CD, and responsive browser verification.
 
-## Arquitectura y herramientas
+The goal is a small, reviewable implementation. Production deployment demonstrates delivery, but does not establish production readiness for private data. Authentication, ownership, monitoring, throttling, and operational recovery remain explicit limitations.
 
-| Decisión | Motivo |
+## Decision register
+
+| Decision | Reason and trade-off |
 | --- | --- |
-| NestJS por features | Separar HTTP, comportamiento y persistencia en módulos revisables. |
-| TypeORM y PostgreSQL | Representar tareas con una entidad, gestionar migraciones y persistir entre reinicios. |
-| Migraciones con `synchronize: false` | Controlar explícitamente los cambios de esquema y conservar los datos. |
-| Versión por tarea | Detectar cambios concurrentes y devolver `409` ante una versión antigua. |
-| React y Vite | Construir una interfaz pequeña con compilación rápida. |
-| Material UI y Tailwind | Reutilizar controles establecidos y definir la distribución responsive. |
-| React Hook Form | Gestionar campos, mensajes, foco y validación del formulario. |
-| Axios compartido | Centralizar origen, timeout y clasificación de errores de transporte. |
-| TanStack Query | Cachear por filtro y página, cancelar lecturas e invalidar resultados tras escrituras. |
-| Dos repositorios | Versionar y comprobar frontend y backend de forma independiente. |
-| Docker Compose | Iniciar ambos repositorios y la base de datos con un comando. |
-| Render y GitHub Actions | Ejecutar comprobaciones y desplegar la rama de producción cuando pasan. |
+| React, Vite, and strict TypeScript | A small static frontend with explicit types and a focused build; no server-side rendering requirement |
+| NestJS feature module | Established dependency injection and HTTP integration; more structure than a minimal Express handler, with clear ownership |
+| PostgreSQL and TypeORM | Relational persistence, transactions, entity mapping, and tracked migrations; database behavior still needs integration tests |
+| Explicit migrations; synchronization disabled | Reviewable schema changes and controlled startup; migrations must succeed before serving requests |
+| Controller/service/repository | HTTP parsing, application operations, and SQL behavior remain separately reviewable; avoid inventing a generic CRUD framework |
+| Shared request parsers | Reuse required-text/integer behavior while feature code supplies task-specific limits |
+| Version-checked updates | Atomic compare-and-update prevents silent lost writes; clients must handle conflicts and refresh |
+| Server-side filtering and pagination | Bounded responses and one authoritative result/count; offset pagination is adequate here but has large-dataset limits |
+| Repeatable-read list transaction | Items and total share a consistent database snapshot; adds a transaction to each list read |
+| Material UI and Tailwind | Established controls with utility-based layout; feature-specific labels and behavior remain local |
+| React Hook Form | Local input/submission state and reusable field integration; it does not own remote cache state |
+| Module-scoped Axios instance | One base URL, timeout, and response-error interceptor without an unnecessary singleton class |
+| TanStack Query | Cache identity, cancellation, freshness, and reconciliation; avoid a second global store for server data |
+| Feature-local task hook | Task endpoints, statuses, query keys, and updates are task behavior; generic folder placement would obscure ownership |
+| Shared notification provider | Queue and accessible toast behavior are reusable; task components retain message ownership and inline fallback |
+| Single frontend route | One screen needs no router; a later multi-page requirement can justify routing |
+| Two repositories | Independent builds and ownership, at the cost of coordinating compatible releases |
+| Docker Compose | Reproducible API/frontend/database startup with health dependencies and persistent local data |
+| GitHub Actions and Render | Repeatable checks and deployment from main; provider configuration and branch protection remain operational concerns |
 
-## Uso de IA y subagentes
+## Cache and concurrency contracts
 
-Se pidió investigar opciones, definir el contrato HTTP, implementar módulos y proponer pruebas. Se aceptó una estructura por features con límites pequeños entre componentes, estado, transporte y persistencia.
+The query key is `['tasks', statusFilter, page, pageSize]`, with 30-second freshness. Reads receive cancellation signals. Window-focus refetching is disabled. Creation invalidates task queries. A saved status response updates the visible row directly when the row still matches the view; changes in filter membership require a fresh page and total. Other cached views are invalidated. Pending writes reconcile against the currently committed filter/page.
 
-Los subagentes Luna recibieron responsabilidades delimitadas para API, interfaz y pruebas de frontend. Compartieron el mismo contrato y leyeron las reglas del proyecto. La integración, la revisión final y la verificación del despliegue corresponden al agente principal.
+Writes do not retry automatically. A timeout may happen after the server committed a write; silently retrying could create duplicates. The UI retains unsuccessful form drafts and allows deliberate retry. There is no idempotency-key implementation.
 
-El contexto se conserva en el plan, los archivos `AGENTS.md`, el contrato HTTP y esta documentación. Los mensajes entre subagentes coordinan nombres, rutas y archivos para reducir cambios incompatibles. Las tareas independientes se ejecutaron en paralelo.
+The database status update checks both UUID and version in a single statement, then increments version. Concurrent callers with the same version cannot both overwrite the task: one receives a conflict. This prevents lost writes; it is not real-time cross-browser synchronization. External changes require another read.
 
-## Skills, MCP y verificación
+## AI requests, accepted output, and corrections
 
-Se consultaron las fuentes oficiales de NestJS, TypeORM, Axios, TanStack Query, Playwright y Render. La skill UI/UX Pro Max se usó para revisar foco, etiquetas, contraste, objetivos táctiles y distribución responsive. La skill de instalación permitió incorporar esa guía al entorno.
+AI was asked to compare libraries, plan the contract and feature structure, implement bounded modules, suggest tests, and prepare documentation. Accepted proposals included the selected stack, shared HTTP transport, feature ownership, and layered verification. The candidate supplied requirements and technology constraints and steered scope, deployment, documentation, and review expectations.
 
-Las herramientas de control de navegador se usaron para inspeccionar la aplicación y configurar los Blueprints de Render. Playwright automatiza el flujo real sobre Docker en escritorio, tablet y móvil. Los repositorios y CI se gestionan con Git y GitHub CLI. Las credenciales quedan fuera de los archivos y commits.
+Luna subagents handled bounded API, interface, and test tasks. They shared project rules and a common HTTP contract. Delegation accelerated independent work; the main agent remained responsible for integration, resolving mismatches, and personally reviewing the completed result. Subagent output was not treated as independent proof of correctness.
 
-Las pruebas unitarias aíslan validación, almacenamiento y lógica. Las pruebas HTTP usan PostgreSQL real y una base dedicada. Testing Library y MSW comprueban los flujos de la interfaz. Las pruebas de navegador incluyen errores, reintento, estados, paginación y recarga. La inspección visual verifica además la alineación y los indicadores de foco.
+Code review and tests led to refinements in cache reconciliation while filters change during pending writes, redundant-read avoidance, validation, status concurrency, field focus styling, and card alignment. Those changes were accepted because observed behavior and checks supported them. Documentation distinguishes implemented behavior from future work rather than treating generated explanations as evidence.
 
-## Ajustes realizados durante el desarrollo
+## Context management and tool use
 
-Se corrigieron el uso de datos asociados a filtros antiguos durante escrituras pendientes, el foco duplicado en campos y la alineación de las tarjetas. Se verificaron las claves de caché y el uso de la respuesta del servidor para evitar lecturas redundantes. Las actualizaciones concurrentes se cubren mediante una versión comprobada en PostgreSQL.
+Project-specific `AGENTS.md` files define feature boundaries, language conventions, commit expectations, and verification requirements. The plan, HTTP contract, repository files, and this decision record retain implementation context. Agents coordinate file ownership and contract changes to reduce conflicting edits. Independent inspection and implementation can run in parallel; dependent edits and final integration remain sequential.
 
-Los commits describen el comportamiento entregado y las comprobaciones. La rama `dev` integra el trabajo y `main` representa producción.
+The public record summarizes decisions and engineering practice. It does not publish raw conversations, private candidate information, access tokens, or verification codes. Environment templates contain local examples only. Repositories ignore real environment files.
 
-## Dependencias
+Official framework/library documentation informed technical choices. The installed UI/UX Pro Max skill supported review of labels, focus, contrast, touch targets, and responsive layout. Browser-control/MCP tooling supported application inspection and Render setup. Git and GitHub CLI supported repository operations and CI inspection. Shell tools and Docker handled local builds, migrations, and tests.
 
-Se fijó `minimatch` 11.0.8 mediante un override para resolver la alerta transitiva de las herramientas de lint. El lockfile conserva la resolución comprobada. Axios usa la versión 1.21.1. CI ejecuta `npm audit --audit-level=moderate` junto con las pruebas y la compilación.
+Integrated-browser access became unavailable during later verification. Playwright then exercised the running application and generated screenshots for direct inspection. This limitation is disclosed rather than describing those runs as integrated-browser sessions.
 
-## Verificación de la entrega
+## Verification strategy and evidence
 
-En el entorno local pasaron 27 pruebas unitarias y 8 de integración de backend, junto con las comprobaciones de tipos, lint y compilación. La integración incluye PostgreSQL, cambios concurrentes, códigos HTTP y el contrato OpenAPI. Las 30 pruebas de frontend cubren almacenamiento, errores de transporte, caché y flujos de tareas. Pasaron nueve recorridos de Playwright sobre Docker.
+| Layer | What it establishes | What it does not establish |
+| --- | --- | --- |
+| Backend unit tests | Parsers, controller outcomes, service delegation, and persistence operation behavior | Actual database/HTTP integration |
+| Backend integration tests | Real PostgreSQL persistence, HTTP validation, pagination, conflict handling, and OpenAPI behavior | Production load or operational resilience |
+| Frontend unit/UI integration tests | Error normalization, filter storage, forms, query behavior, and rendered flows with MSW | A real backend connection in those tests |
+| Playwright on Compose | Frontend/API/database interaction, state changes, filters, pagination, notifications, and recovery in three viewports | Complete accessibility, security, or performance certification |
+| Visual inspection | Card alignment, focus presentation, responsive screenshots, and overflow checks | Exhaustive device or assistive-technology coverage |
+| Production smoke check | Deployed create/status toasts, manual close, automatic dismissal, and API response behavior | A substitute for isolated repeatable tests |
 
-Playwright recorre el sistema en 375, 768 y 1440 píxeles. Las capturas de la interfaz están enlazadas desde el README del frontend. Se verificaron la alineación de tarjetas, el foco de los campos y la ausencia de desbordamiento horizontal.
+The verified baseline is 27 backend unit tests, eight PostgreSQL integration tests, 30 frontend tests, and nine browser scenarios. Controlled error injection avoids interrupting production infrastructure. Production smoke-check records were removed after verification. A later explicitly authorized production clear returned 204 and a subsequent read confirmed zero tasks.
+
+## Security and dependencies
+
+Lockfiles preserve reviewed dependency resolution. A `minimatch` 11.0.8 override addresses a transitive tooling advisory. Axios is pinned at 1.21.1 in the frontend. Audits reported zero vulnerabilities at the verified baseline; this is a point-in-time result, not a permanent security guarantee. CI audits dependencies alongside tests and build checks.
+
+The API validates independently of the form. Unexpected server errors do not expose internal details. CORS uses configured frontend origins. Neither CORS nor unpublished endpoints replace authentication. No claim of authorization or API rate limiting is made.
+
+## Development and release flow
+
+Work starts in `feature/*` or `fix/*` from `dev`, integrates through a pull request to `dev`, and is promoted through a pull request to `main`. Commits include a descriptive title and body covering behavior and verification. `main` represents production.
+
+CI is configured on pushes and pull requests in both repositories. It audits, lints, typechecks, tests, and builds; PostgreSQL integration and full-stack browser jobs cover the shared contract. Companion checkout selects `dev` for integration and `main` for production. Render is configured to deploy main after checks pass. Independent repositories require coordinated, backward-compatible contract changes because deployment is not atomic.
+
+## Next priorities
+
+Before handling private user data, add authentication, task ownership, request throttling, operational monitoring, and backup/restore verification. Add a full screen-reader audit, stronger repository release protection, and idempotent create semantics where requirements justify them. Evaluate cursor pagination and database query plans under realistic load. Replace the expiring free database for any long-lived service.
