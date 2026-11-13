@@ -45,10 +45,10 @@ Los commits describen el comportamiento entregado y las comprobaciones. La rama 
 
 ## Dependencias
 
-Se fijó `minimatch` 11.0.8 mediante un override para resolver la alerta transitiva de las herramientas de lint. El lockfile conserva la resolución comprobada. Axios usa la versión 1.21.1. `npm audit` se ejecuta sobre las dependencias instaladas y las comprobaciones verifican la compatibilidad.
+Se fijó `minimatch` 11.0.8 mediante un override para resolver la alerta transitiva de las herramientas de lint. El lockfile conserva la resolución comprobada. Axios usa la versión 1.21.1. CI ejecuta `npm audit --audit-level=moderate` junto con las pruebas y la compilación.
 
 ## Verificación de la entrega
 
-En el entorno local pasaron 27 pruebas unitarias y 8 de integración de backend, junto con las comprobaciones de tipos, lint y compilación. La integración incluye PostgreSQL, cambios concurrentes, códigos HTTP y el contrato OpenAPI. Las pruebas de frontend cubren almacenamiento, errores de transporte, caché y flujos de tareas.
+En el entorno local pasaron 27 pruebas unitarias y 8 de integración de backend, junto con las comprobaciones de tipos, lint y compilación. La integración incluye PostgreSQL, cambios concurrentes, códigos HTTP y el contrato OpenAPI. Las 30 pruebas de frontend cubren almacenamiento, errores de transporte, caché y flujos de tareas. Pasaron nueve recorridos de Playwright sobre Docker.
 
 Playwright recorre el sistema en 375, 768 y 1440 píxeles. Las capturas de la interfaz están enlazadas desde el README del frontend. Se verificaron la alineación de tarjetas, el foco de los campos y la ausencia de desbordamiento horizontal.
