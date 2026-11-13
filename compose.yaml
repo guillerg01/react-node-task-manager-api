@@ -20,6 +20,7 @@ services:
       DATABASE_URL: postgresql://tasks:tasks@db:5432/tasks
       WEB_ORIGIN: http://localhost:5174,http://127.0.0.1:5174
       PORT: 3000
+      TASK_DELETE_PASSWORD: ${TASK_DELETE_PASSWORD:-}
     ports:
       - "127.0.0.1:3001:3000"
     depends_on:

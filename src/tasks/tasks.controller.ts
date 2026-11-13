@@ -11,6 +11,7 @@ import {
   Post,
   Query,
   NotFoundException,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBadRequestResponse,
@@ -32,6 +33,7 @@ import {
   TaskDto,
   TaskPageDto,
 } from './task.dto.js';
+import { TaskDeletionGuard } from './task-deletion.guard.js';
 import {
   parsePositiveInteger,
   parseRequiredTrimmedText,
@@ -72,6 +74,7 @@ export class TasksController {
   constructor(private readonly tasks: TasksService) {}
 
   @Delete()
+  @UseGuards(TaskDeletionGuard)
   @HttpCode(204)
   @ApiExcludeEndpoint()
   async removeAll(): Promise<void> {
@@ -79,6 +82,7 @@ export class TasksController {
   }
 
   @Delete(':id')
+  @UseGuards(TaskDeletionGuard)
   @HttpCode(204)
   @ApiExcludeEndpoint()
   async remove(@Param('id', new ParseUUIDPipe()) id: string): Promise<void> {
