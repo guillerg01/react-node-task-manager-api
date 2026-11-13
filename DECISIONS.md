@@ -25,6 +25,7 @@ Se busca una solución pequeña y revisable. El despliegue demuestra capacidad d
 | TanStack Query | Identidad, vigencia, cancelación y reconciliación de datos; evita duplicar estado remoto en otro almacén |
 | Hook de tareas dentro de la feature | Sus estados, rutas y claves son específicos de tareas; una carpeta genérica ocultaría esa dependencia |
 | Proveedor de notificaciones | Cola y presentación accesible reutilizables; mensajes específicos y alternativa en línea en el tablero |
+| Guard de mantenimiento | Comprueba una credencial configurada en el backend antes de ejecutar la operación; rechaza accesos si falta configuración y no expone la clave al frontend |
 | Una ruta frontend | Una pantalla no necesita una biblioteca de enrutado |
 | Dos repositorios | Compilación y responsabilidad independientes; exige coordinar contratos y publicaciones |
 | Docker Compose | Arranque reproducible de tres servicios con salud y persistencia local |
@@ -67,7 +68,7 @@ El navegador integrado dejó de estar disponible durante verificaciones posterio
 | Inspección visual | Alineación, foco, capturas responsive y desbordamiento | Todos los dispositivos o tecnologías de asistencia |
 | Comprobación en producción | Notificaciones de creación y estado, cierre manual y automático y respuestas desplegadas | Sustituir pruebas aisladas y repetibles |
 
-La base verificada tiene 27 pruebas unitarias backend, ocho de integración PostgreSQL, 30 frontend y nueve recorridos de navegador. Los errores controlados evitan interrumpir infraestructura de producción. Los registros creados para comprobar notificaciones se eliminaron después. Un vaciado de producción autorizado posteriormente devolvió 204 y la lectura siguiente confirmó cero tareas.
+La base verificada tiene 35 pruebas unitarias backend, ocho de integración PostgreSQL, 30 frontend y nueve recorridos de navegador. Los errores controlados evitan interrumpir infraestructura de producción. Los registros creados para comprobar notificaciones se eliminaron después. Un vaciado de producción autorizado posteriormente devolvió 204 y la lectura siguiente confirmó cero tareas.
 
 ## Dependencias y seguridad
 
